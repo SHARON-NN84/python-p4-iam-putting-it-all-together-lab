@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app import app
-from models import db, Recipe
+from models import db, Recipe, User
 
 class TestRecipe:
     '''User in models.py'''
@@ -13,20 +13,28 @@ class TestRecipe:
         with app.app_context():
 
             Recipe.query.delete()
+            User.query.delete()
+            db.session.commit()
+
+            # Create a user first
+            user = User(username="TestUser")
+            user.password_hash = "password"
+            db.session.add(user)
             db.session.commit()
 
             recipe = Recipe(
-                    title="Delicious Shed Ham",
-                    instructions="""Or kind rest bred with am shed then. In""" + \
-                        """ raptures building an bringing be. Elderly is detract""" + \
-                        """ tedious assured private so to visited. Do travelling""" + \
-                        """ companions contrasted it. Mistress strongly remember""" + \
-                        """ up to. Ham him compass you proceed calling detract.""" + \
-                        """ Better of always missed we person mr. September""" + \
-                        """ smallness northward situation few her certainty""" + \
-                        """ something.""",
-                    minutes_to_complete=60,
-                    )
+                title="Delicious Shed Ham",
+                instructions="""Or kind rest bred with am shed then. In""" + \
+                    """ raptures building an bringing be. Elderly is detract""" + \
+                    """ tedious assured private so to visited. Do travelling""" + \
+                    """ companions contrasted it. Mistress strongly remember""" + \
+                    """ up to. Ham him compass you proceed calling detract.""" + \
+                    """ Better of always missed we person mr. September""" + \
+                    """ smallness northward situation few her certainty""" + \
+                    """ something.""",
+                minutes_to_complete=60,
+                user_id=user.id  # <-- associate with user
+            )
 
             db.session.add(recipe)
             db.session.commit()
@@ -66,9 +74,37 @@ class TestRecipe:
 
             '''must raise either a sqlalchemy.exc.IntegrityError with constraints or a custom validation ValueError'''
             with pytest.raises( (IntegrityError, ValueError) ):
+                # Create a user for the recipe
+                user = User(username="TestUser2")
+                user.password_hash = "password"
+                db.session.add(user)
+                db.session.commit()
+
                 recipe = Recipe(
                     title="Generic Ham",
-                    instructions="idk lol")
+                    instructions="idk lol",
+                    user_id=user.id
+                )
                 db.session.add(recipe)
                 db.session.commit()
+
+    def test_recipe_creation(self):
+        with app.app_context():
+            User.query.delete()
+            db.session.commit()
+
+            user = User(username="TestUser")
+            user.password_hash = "password"
+            db.session.add(user)
+            db.session.commit()
+
+            recipe = Recipe(
+                title="My Recipe",
+                instructions="A" * 60,
+                minutes_to_complete=10,
+                user_id=user.id
+            )
+            db.session.add(recipe)
+            db.session.commit()
+            assert recipe.id is not None
 

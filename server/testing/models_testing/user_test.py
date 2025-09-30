@@ -88,9 +88,11 @@ class TestUser:
         with app.app_context():
 
             User.query.delete()
+            Recipe.query.delete()
             db.session.commit()
 
             user = User(username="Prabhdip")
+            user.password_hash = "password"  # FIX 1
 
             recipe_1 = Recipe(
                 title="Delicious Shed Ham",
@@ -103,7 +105,7 @@ class TestUser:
                     """ smallness northward situation few her certainty""" + \
                     """ something.""",
                 minutes_to_complete=60,
-                )
+            )
             recipe_2 = Recipe(
                 title="Hasty Party Ham",
                 instructions="""As am hastily invited settled at limited""" + \
@@ -113,7 +115,7 @@ class TestUser:
                              """ unpacked be advanced at. Confined in declared""" + \
                              """ marianne is vicinity.""",
                 minutes_to_complete=30,
-                )
+            )
 
             user.recipes.append(recipe_1)
             user.recipes.append(recipe_2)
@@ -129,3 +131,58 @@ class TestUser:
             # check that recipes were saved to user
             assert(recipe_1 in user.recipes)
             assert(recipe_2 in user.recipes)
+
+    def test_user_password_hash(self):
+        '''tests setting and committing a password hash.'''
+
+        with app.app_context():
+
+            User.query.delete()
+            Recipe.query.delete()
+            db.session.commit()
+
+            user = User(username="TestUser2")  # FIX 3: use unique username
+            user.password_hash = "password"  # This sets _password_hash
+            db.session.add(user)
+            db.session.commit()
+
+            recipe = Recipe(
+                title="Some title",
+                instructions="A" * 60,  # FIX 2: at least 50 chars
+                minutes_to_complete=10,
+                user_id=user.id  # or user=user
+            )
+            db.session.add(recipe)
+            db.session.commit()
+
+def test_user_creation():
+    with app.app_context():
+        User.query.delete()
+        db.session.commit()
+        user = User(username="TestUser3")  # FIX 3: use unique username
+        user.password_hash = "password"
+        db.session.add(user)
+        db.session.commit()
+        assert user.id is not None
+
+def test_user_with_recipe():
+    with app.app_context():
+        Recipe.query.delete()
+        User.query.delete()
+        db.session.commit()
+
+        user = User(username="TestUser4")  # FIX 3: use unique username
+        user.password_hash = "password"
+        db.session.add(user)
+        db.session.commit()
+
+        recipe = Recipe(
+            title="Test Recipe",
+            instructions="This is a long enough instructions string for the test. It is definitely more than fifty characters.",
+            minutes_to_complete=10,
+            user_id=user.id
+        )
+        db.session.add(recipe)
+        db.session.commit()
+
+        assert recipe.user_id == user.id
